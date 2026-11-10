@@ -180,31 +180,14 @@ document.addEventListener("keydown", event => {
    AUTOMATIC SLOW SCROLLING
 ================================= */
 
-
-/* AUTOMATIC SLOW SCROLLING WITH MANUAL CONTROL */
+/* AUTOMATIC SCROLLING - DESKTOP AND MOBILE */
 
 let autoScrollTimer = null;
 let resumeScrollTimer = null;
-let isManualScrolling = false;
 
-function startAutoScroll() {
-    if (autoScrollTimer !== null || isManualScrolling) return;
-
-    autoScrollTimer = setInterval(() => {
-        const page = document.scrollingElement;
-
-        if (!page) return;
-
-        const maxScroll = page.scrollHeight - window.innerHeight;
-
-        if (page.scrollTop >= maxScroll - 2) {
-            stopAutoScroll();
-            return;
-        }
-
-        page.scrollTop += 1;
-    }, 30);
-}
+const AUTO_SCROLL_SPEED = 1;
+const AUTO_SCROLL_INTERVAL = 30;
+const RESUME_DELAY = 3000;
 
 function stopAutoScroll() {
     if (autoScrollTimer !== null) {
@@ -213,35 +196,74 @@ function stopAutoScroll() {
     }
 }
 
-function handleManualScroll() {
-    isManualScrolling = true;
-    stopAutoScroll();
+function startAutoScroll() {
+    if (autoScrollTimer !== null) return;
 
+    autoScrollTimer = setInterval(() => {
+        const maxScroll =
+            document.documentElement.scrollHeight - window.innerHeight;
+
+        if (window.scrollY >= maxScroll - 2) {
+            stopAutoScroll();
+            return;
+        }
+
+        window.scrollTo(0, window.scrollY + AUTO_SCROLL_SPEED);
+    }, AUTO_SCROLL_INTERVAL);
+}
+
+function pauseAndResumeAutoScroll() {
+    stopAutoScroll();
     clearTimeout(resumeScrollTimer);
 
     resumeScrollTimer = setTimeout(() => {
-        isManualScrolling = false;
         startAutoScroll();
-    }, 3000);
+    }, RESUME_DELAY);
 }
 
-// Detect manual interaction
-window.addEventListener("wheel", handleManualScroll, { passive: true });
-window.addEventListener("touchstart", handleManualScroll, { passive: true });
-window.addEventListener("touchmove", handleManualScroll, { passive: true });
+/* Desktop manual scrolling */
+window.addEventListener("wheel", pauseAndResumeAutoScroll, {
+    passive: true
+});
+
+/* Mobile manual scrolling */
+window.addEventListener("touchmove", pauseAndResumeAutoScroll, {
+    passive: true
+});
+
+window.addEventListener("touchend", () => {
+    clearTimeout(resumeScrollTimer);
+
+    resumeScrollTimer = setTimeout(() => {
+        startAutoScroll();
+    }, RESUME_DELAY);
+}, { passive: true });
+
+/* Keyboard scrolling */
 window.addEventListener("keydown", (event) => {
     if ([
-        "ArrowDown", "ArrowUp", "PageDown",
-        "PageUp", "Home", "End", " "
+        "ArrowDown", "ArrowUp",
+        "PageDown", "PageUp",
+        "Home", "End", " "
     ].includes(event.key)) {
-        handleManualScroll();
+        pauseAndResumeAutoScroll();
     }
 });
 
-// Start automatic scrolling after page loads
-window.addEventListener("load", () => {
+/* Start after the page is ready */
+function initializeAutoScroll() {
     setTimeout(startAutoScroll, 3000);
-}, { once: true });
+}
+
+if (document.readyState === "complete") {
+    initializeAutoScroll();
+} else {
+    window.addEventListener("load", initializeAutoScroll, {
+        once: true
+    });
+}
+
+
 
 
 /* =================================
