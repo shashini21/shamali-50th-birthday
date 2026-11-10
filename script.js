@@ -180,7 +180,8 @@ document.addEventListener("keydown", event => {
    AUTOMATIC SLOW SCROLLING
 ================================= */
 
-/* AUTOMATIC SCROLLING - DESKTOP AND MOBILE */
+
+/* AUTOMATIC SCROLLING WITH MANUAL CONTROL */
 
 let autoScrollTimer = null;
 let resumeScrollTimer = null;
@@ -190,25 +191,24 @@ const AUTO_SCROLL_INTERVAL = 30;
 const RESUME_DELAY = 3000;
 
 function stopAutoScroll() {
-    if (autoScrollTimer !== null) {
-        clearInterval(autoScrollTimer);
-        autoScrollTimer = null;
-    }
+    clearInterval(autoScrollTimer);
+    autoScrollTimer = null;
 }
 
 function startAutoScroll() {
     if (autoScrollTimer !== null) return;
 
     autoScrollTimer = setInterval(() => {
-        const maxScroll =
-            document.documentElement.scrollHeight - window.innerHeight;
+        const page = document.scrollingElement;
+        const maxScroll = page.scrollHeight - window.innerHeight;
 
-        if (window.scrollY >= maxScroll - 2) {
+        if (page.scrollTop >= maxScroll - 2) {
             stopAutoScroll();
             return;
         }
 
-        window.scrollTo(0, window.scrollY + AUTO_SCROLL_SPEED);
+        page.scrollTop += AUTO_SCROLL_SPEED;
+
     }, AUTO_SCROLL_INTERVAL);
 }
 
@@ -221,47 +221,16 @@ function pauseAndResumeAutoScroll() {
     }, RESUME_DELAY);
 }
 
-/* Desktop manual scrolling */
-window.addEventListener("wheel", pauseAndResumeAutoScroll, {
+/* Detect manual scrolling on mobile and desktop */
+window.addEventListener("scroll", pauseAndResumeAutoScroll, {
     passive: true
 });
 
-/* Mobile manual scrolling */
-window.addEventListener("touchmove", pauseAndResumeAutoScroll, {
-    passive: true
-});
-
-window.addEventListener("touchend", () => {
-    clearTimeout(resumeScrollTimer);
-
-    resumeScrollTimer = setTimeout(() => {
-        startAutoScroll();
-    }, RESUME_DELAY);
-}, { passive: true });
-
-/* Keyboard scrolling */
-window.addEventListener("keydown", (event) => {
-    if ([
-        "ArrowDown", "ArrowUp",
-        "PageDown", "PageUp",
-        "Home", "End", " "
-    ].includes(event.key)) {
-        pauseAndResumeAutoScroll();
-    }
-});
-
-/* Start after the page is ready */
-function initializeAutoScroll() {
+/* Start automatic scrolling after 3 seconds */
+window.addEventListener("load", () => {
     setTimeout(startAutoScroll, 3000);
-}
+}, { once: true });
 
-if (document.readyState === "complete") {
-    initializeAutoScroll();
-} else {
-    window.addEventListener("load", initializeAutoScroll, {
-        once: true
-    });
-}
 
 
 
