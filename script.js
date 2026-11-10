@@ -181,56 +181,93 @@ document.addEventListener("keydown", event => {
 ================================= */
 
 
-/* AUTOMATIC SCROLLING WITH MANUAL CONTROL */
 
-let autoScrollTimer = null;
-let resumeScrollTimer = null;
+/* AUTOMATIC SCROLLING - MOBILE AND DESKTOP */
 
-const AUTO_SCROLL_SPEED = 1;
-const AUTO_SCROLL_INTERVAL = 30;
-const RESUME_DELAY = 3000;
+let autoScrollFrame = null;
+let resumeTimer = null;
+let isUserInteracting = false;
 
-function stopAutoScroll() {
-    clearInterval(autoScrollTimer);
-    autoScrollTimer = null;
+const scrollSpeed = 0.35;
+const resumeDelay = 3000;
+
+function automaticScroll() {
+    if (isUserInteracting) {
+        autoScrollFrame = null;
+        return;
+    }
+
+    const page = document.scrollingElement;
+    const maxScroll = page.scrollHeight - window.innerHeight;
+
+    if (page.scrollTop >= maxScroll - 2) {
+        autoScrollFrame = null;
+        return;
+    }
+
+    page.scrollTop += scrollSpeed;
+
+    autoScrollFrame = requestAnimationFrame(automaticScroll);
 }
 
 function startAutoScroll() {
-    if (autoScrollTimer !== null) return;
-
-    autoScrollTimer = setInterval(() => {
-        const page = document.scrollingElement;
-        const maxScroll = page.scrollHeight - window.innerHeight;
-
-        if (page.scrollTop >= maxScroll - 2) {
-            stopAutoScroll();
-            return;
-        }
-
-        page.scrollTop += AUTO_SCROLL_SPEED;
-
-    }, AUTO_SCROLL_INTERVAL);
+    if (autoScrollFrame !== null || isUserInteracting) return;
+    autoScrollFrame = requestAnimationFrame(automaticScroll);
 }
 
-function pauseAndResumeAutoScroll() {
+function stopAutoScroll() {
+    if (autoScrollFrame !== null) {
+        cancelAnimationFrame(autoScrollFrame);
+        autoScrollFrame = null;
+    }
+}
+
+function pauseAutoScroll() {
+    isUserInteracting = true;
     stopAutoScroll();
-    clearTimeout(resumeScrollTimer);
-
-    resumeScrollTimer = setTimeout(() => {
-        startAutoScroll();
-    }, RESUME_DELAY);
+    clearTimeout(resumeTimer);
 }
 
-/* Detect manual scrolling on mobile and desktop */
-window.addEventListener("scroll", pauseAndResumeAutoScroll, {
+function resumeAutoScroll() {
+    isUserInteracting = false;
+    clearTimeout(resumeTimer);
+
+    resumeTimer = setTimeout(() => {
+        startAutoScroll();
+    }, resumeDelay);
+}
+
+/* Mobile touch */
+window.addEventListener("touchstart", pauseAutoScroll, {
     passive: true
 });
 
-/* Start automatic scrolling after 3 seconds */
+window.addEventListener("touchend", resumeAutoScroll, {
+    passive: true
+});
+
+window.addEventListener("touchcancel", resumeAutoScroll, {
+    passive: true
+});
+
+/* Desktop mouse and keyboard */
+window.addEventListener("wheel", () => {
+    pauseAutoScroll();
+    resumeAutoScroll();
+}, { passive: true });
+
+window.addEventListener("keydown", (event) => {
+    if (["ArrowDown", "ArrowUp", "PageDown", "PageUp",
+         "Home", "End", " "].includes(event.key)) {
+        pauseAutoScroll();
+        resumeAutoScroll();
+    }
+});
+
+/* Start after page loads */
 window.addEventListener("load", () => {
     setTimeout(startAutoScroll, 3000);
 }, { once: true });
-
 
 
 
